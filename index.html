@@ -758,9 +758,19 @@ sb.auth.onAuthStateChange(async (event, session) => {
 });
 
 // Sayfa yüklendiğinde oturum kontrolü
-sb.auth.getSession().then(({ data: { session } }) => {
+sb.auth.getSession().then(async ({ data: { session }, error }) => {
+  if (error) {
+    await sb.auth.signOut();
+    return;
+  }
   if (session?.user) {
-    onLogin(session.user);
+    // Oturumu yenile — token süresi dolmuş olabilir
+    const { data: refreshed, error: refErr } = await sb.auth.refreshSession();
+    if (refErr || !refreshed?.session) {
+      await sb.auth.signOut();
+      return;
+    }
+    onLogin(refreshed.session.user);
   }
 });
 
