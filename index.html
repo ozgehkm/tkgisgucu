@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TKG Otomotiv — İş Gücü Analiz Platformu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --brand:#F5A623;--brand-d:#C8831A;--brand-l:#FEF3DC;--brand-xl:#FFFBF0;
+  --bg:#F4F3F0;--surf:#FFFFFF;--surf2:#F0EFEc;--surf3:#E8E7E3;
+  --bdr:rgba(0,0,0,0.07);--bdr-m:rgba(0,0,0,0.12);--bdr-s:rgba(0,0,0,0.18);
+  --txt:#18180F;--txt2:#5C5C52;--txt3:#9A9A90;--txt4:#C2C2BA;
+  --blue:#1D4ED8;--blue-m:#DBEAFE;--blue-l:#EFF6FF;
+  --green:#15803D;--green-m:#DCFCE7;--green-l:#F0FDF4;
+  --red:#B91C1C;--red-m:#FEE2E2;--red-l:#FEF2F2;
+  --amber:#B45309;--amber-m:#FDE68A;--amber-l:#FFFBEB;
+  --purple:#6D28D9;--purple-m:#EDE9FE;--purple-l:#F5F3FF;
+  --r:8px;--r-l:12px;--r-xl:16px;
+  --sh:0 1px 2px rgba(0,0,0,.05),0 1px 3px rgba(0,0,0,.04);
+  --sh-m:0 4px 12px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.04);
+  --sh-l:0 8px 24px rgba(0,0,0,.1),0 4px 8px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--surf);border-bottom:1px solid var(--bdr);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:200;box-shadow:var(--sh)}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:var(--brand);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#5C3A00;letter-spacing:-.3px;flex-shrink:0}
+.app-name{font-size:14px;font-weight:600;color:var(--txt)}
+.app-badge{font-size:11px;color:var(--txt3);background:var(--surf2);border:1px solid var(--bdr);border-radius:20px;padding:2px 8px;margin-left:6px}
+.top-actions{display:flex;gap:6px;align-items:center}
+
+/* SIDEBAR + MAIN */
+.layout{display:flex;min-height:calc(100vh - 54px)}
+.sidebar{width:220px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);padding:16px 0;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-section{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--txt4);text-transform:uppercase;padding:0 16px 6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:13px;font-weight:500;color:var(--txt2);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;border-left:2px solid transparent;transition:all .12s}
+.nav-item:hover{color:var(--txt);background:var(--surf2)}
+.nav-item.active{color:var(--brand-d);background:var(--brand-l);border-left-color:var(--brand)}
+.nav-item .nav-icon{width:16px;height:16px;opacity:.6;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1}
+.nav-divider{height:1px;background:var(--bdr);margin:8px 16px}
+.dept-nav-item{display:flex;align-items:center;justify-content:space-between;padding:7px 16px 7px 32px;font-size:12px;font-weight:500;color:var(--txt2);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;border-left:2px solid transparent;transition:all .12s}
+.dept-nav-item:hover{color:var(--txt);background:var(--surf2)}
+.dept-nav-item.active{color:var(--brand-d);background:var(--brand-l);border-left-color:var(--brand)}
+.dept-badge{font-size:10px;background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:1px 6px;font-weight:600;color:var(--txt3)}
+.dept-badge.over{background:var(--red-m);border-color:var(--red-m);color:var(--red)}
+.sidebar-bottom{margin-top:auto;padding:12px 16px;border-top:1px solid var(--bdr)}
+
+.main{flex:1;padding:24px;min-width:0;overflow-x:hidden}
+
+/* PAGES */
+.page{display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--bdr-m);background:var(--surf);font-size:12px;font-weight:500;cursor:pointer;color:var(--txt);font-family:inherit;display:inline-flex;align-items:center;gap:5px;box-shadow:var(--sh);transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--surf2);border-color:var(--bdr-s)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--brand);border-color:var(--brand-d);color:#5C3A00;box-shadow:0 1px 3px rgba(245,166,35,.25)}
+.btn-primary:hover{background:var(--brand-d);color:#fff}
+.btn-danger{background:var(--red-l);border-color:var(--red-m);color:var(--red)}
+.btn-danger:hover{background:var(--red-m)}
+.btn-ghost{border-color:transparent;background:transparent;box-shadow:none}
+.btn-ghost:hover{background:var(--surf2);border-color:var(--bdr)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-lg{padding:10px 20px;font-size:13px}
+.btn-icon{padding:6px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--surf);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--sh);transition:all .12s}
+.btn-icon:hover{background:var(--surf2)}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.page-header-left h1{font-size:18px;font-weight:600;color:var(--txt);margin-bottom:3px}
+.page-header-left p{font-size:12px;color:var(--txt3)}
+.page-header-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* METRICS */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.metric-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r-l);padding:14px 16px;box-shadow:var(--sh)}
+.metric-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-bottom:6px}
+.metric-value{font-size:24px;font-weight:600;color:var(--txt);font-family:'DM Mono',monospace;line-height:1}
+.metric-value.warn{color:var(--red)}
+.metric-value.good{color:var(--green)}
+.metric-value.info{color:var(--blue)}
+.metric-value.brand{color:var(--brand-d)}
+.metric-sub{font-size:11px;color:var(--txt3);margin-top:4px}
+
+/* CARDS */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r-l);padding:18px 20px;margin-bottom:14px;box-shadow:var(--sh)}
+.card-sm{padding:14px 16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
+.card-title-lg{font-size:14px;font-weight:600;color:var(--txt)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;gap:3px}
+.badge-ok{background:var(--green-m);color:var(--green)}
+.badge-warn{background:var(--red-m);color:var(--red)}
+.badge-info{background:var(--blue-m);color:var(--blue)}
+.badge-amber{background:var(--amber-m);color:var(--amber)}
+.badge-brand{background:var(--brand-l);color:var(--brand-d)}
+.badge-purple{background:var(--purple-m);color:var(--purple)}
+.badge-gray{background:var(--surf2);color:var(--txt2);border:1px solid var(--bdr)}
+
+/* BARS */
+.bar-row{margin-bottom:7px}
+.bar-label{font-size:11px;color:var(--txt2);display:flex;justify-content:space-between;margin-bottom:3px}
+.bar-label .val{font-weight:600;font-family:'DM Mono',monospace;color:var(--txt)}
+.bar-track{height:6px;background:var(--surf2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* AVATAR */
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;background:var(--blue-l);color:var(--blue);border:1.5px solid var(--blue-m)}
+.avatar-sm{width:32px;height:32px;font-size:11px}
+.avatar-md{width:40px;height:40px;font-size:13px}
+.avatar-lg{width:48px;height:48px;font-size:15px}
+
+/* PERSON CARD */
+.person-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r-l);padding:16px 18px;margin-bottom:10px;box-shadow:var(--sh);transition:box-shadow .2s,border-color .2s}
+.person-card:hover{box-shadow:var(--sh-m);border-color:var(--bdr-m)}
+.person-card.expanded .expand-body{display:block}
+.expand-body{display:none;border-top:1px solid var(--bdr);margin-top:14px;padding-top:14px}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:600px){.form-grid-3{grid-template-columns:1fr}}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;font-size:13px;padding:8px 11px;border:1px solid var(--bdr-m);border-radius:var(--r);background:var(--surf);color:var(--txt);font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(245,166,35,.12)}
+.field textarea{resize:vertical;min-height:70px}
+
+/* SLIDERS */
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.slider-label{font-size:12px;color:var(--txt2);font-weight:500;min-width:190px;flex-shrink:0}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--surf2);outline:none;border:none;cursor:pointer}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--brand);cursor:pointer;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.slider-val{font-size:12px;font-weight:600;color:var(--txt);min-width:36px;text-align:right;font-family:'DM Mono',monospace}
+
+/* SUM */
+.sum-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;margin-bottom:14px}
+.sum-ok{background:var(--green-m);color:var(--green)}
+.sum-err{background:var(--red-m);color:var(--red)}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--bdr);margin:14px 0}
+
+/* SECTION */
+.section-title{font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px}
+.section-sub{font-size:12px;color:var(--txt3);margin-bottom:16px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:500px}
+table.tbl th{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);padding:9px 12px;border-bottom:1px solid var(--bdr);text-align:left;background:var(--surf);position:sticky;top:0}
+table.tbl td{padding:10px 12px;border-bottom:1px solid var(--bdr);color:var(--txt);vertical-align:middle}
+table.tbl tr:last-child td{border-bottom:none}
+table.tbl tr:hover td{background:var(--surf2)}
+
+/* TASK ITEM */
+.task-item{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bdr);gap:8px}
+.task-item:last-child{border-bottom:none}
+.task-cat{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px}
+.task-cat-0{background:var(--blue-m);color:var(--blue)}
+.task-cat-1{background:var(--green-m);color:var(--green)}
+.task-cat-2{background:var(--amber-m);color:var(--amber)}
+.task-cat-3{background:var(--red-m);color:var(--red)}
+
+/* AI BOX */
+.ai-box{background:var(--purple-l);border:1px solid var(--purple-m);border-radius:var(--r-l);padding:16px 18px;margin-top:14px}
+.ai-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--purple);margin-bottom:8px}
+.ai-body{font-size:13px;color:#3B0764;line-height:1.75;white-space:pre-wrap}
+.dot-pulse{display:inline-flex;gap:3px;align-items:center}
+.dot-pulse span{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:dp 1.2s ease-in-out infinite}
+.dot-pulse span:nth-child(2){animation-delay:.2s}
+.dot-pulse span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* DEPT OVERVIEW CARD */
+.dept-overview-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r-l);padding:16px 18px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.dept-overview-card:hover{box-shadow:var(--sh-m);border-color:var(--bdr-m)}
+.util-bar{display:flex;align-items:center;gap:8px;margin-top:6px}
+.util-track{flex:1;height:5px;background:var(--surf2);border-radius:3px;overflow:hidden}
+.util-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--txt2)}
+
+/* CRITICAL ALERT */
+.alert{padding:12px 14px;border-radius:var(--r);font-size:12px;font-weight:500;display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+.alert-warn{background:var(--red-l);border:1px solid var(--red-m);color:var(--red)}
+.alert-info{background:var(--blue-l);border:1px solid var(--blue-m);color:var(--blue)}
+.alert-amber{background:var(--amber-l);border:1px solid var(--amber-m);color:var(--amber)}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 20px;color:var(--txt3)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surf);border-radius:var(--r-xl);padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-l)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-title{font-size:15px;font-weight:600;color:var(--txt)}
+
+/* TABS */
+.tab-row{display:flex;gap:0;border-bottom:1px solid var(--bdr);margin-bottom:18px}
+.tab-btn{padding:8px 14px;font-size:12px;font-weight:500;color:var(--txt2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;transition:all .12s}
+.tab-btn:hover{color:var(--txt)}
+.tab-btn.active{color:var(--brand-d);border-bottom-color:var(--brand)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* IMPORT */
+.drop-zone{border:2px dashed var(--bdr-m);border-radius:var(--r-l);padding:32px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surf2)}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--brand);background:var(--brand-xl)}
+.drop-zone p{font-size:13px;color:var(--txt3);margin-top:8px}
+.drop-zone strong{font-size:14px;color:var(--txt2)}
+
+/* CHART CONTAINER */
+.chart-wrap{position:relative;height:240px}
+.chart-wrap-sm{position:relative;height:180px}
+
+/* GRID 2 COL */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid-2{grid-template-columns:1fr}}
+
+/* SCROLLABLE */
+.overflow-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{padding:16px}
+}
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.login-box{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r-xl);padding:36px;width:100%;max-width:380px;box-shadow:var(--sh-l)}
+.login-logo{width:48px;height:48px;background:var(--brand);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#5C3A00;margin:0 auto 16px}
+.login-title{font-size:18px;font-weight:600;text-align:center;color:var(--txt);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:24px}
+.login-err{background:var(--red-l);border:1px solid var(--red-m);color:var(--red);border-radius:var(--r);padding:8px 12px;font-size:12px;margin-bottom:12px;display:none}
+.sync-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:6px}
+.sync-ok{background:var(--green-m);color:var(--green)}
+.sync-err{background:var(--red-m);color:var(--red)}
+.sync-ing{background:var(--amber-m);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">TKG</div>
+    <div class="login-title">İş Gücü Analiz Platformu</div>
+    <div class="login-sub">Devam etmek için giriş yapın</div>
+    <div class="login-err" id="login-err">E-posta veya şifre hatalı.</div>
+    <div class="field"><label>E-posta</label><input type="email" id="login-email" placeholder="ornek@tkg.com" autocomplete="email" /></div>
+    <div class="field"><label>Şifre</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" /></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()" id="login-btn">Giriş Yap</button>
+    <div style="margin-top:12px;font-size:11px;color:var(--txt4);text-align:center">TKG Otomotiv · İK Departmanı</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo-wrap">
+    <div class="logo">TKG</div>
+    <div>
+      <span class="app-name">İş Gücü Analiz Platformu</span>
+      <span class="app-badge" id="company-name-badge">TKG Otomotiv</span>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span class="sync-badge sync-ok" id="sync-badge" style="display:none">✓ Senkronize</span>
+    <span style="font-size:12px;color:var(--txt3)" id="user-email-badge"></span>
+    <button class="btn btn-sm btn-ghost" onclick="doLogout()" id="logout-btn" style="display:none">Çıkış</button>
+    <button class="btn btn-sm btn-ghost" onclick="openImportModal()">📥 CSV İçe Aktar</button>
+    <button class="btn btn-sm btn-ghost" onclick="exportData()">📤 Dışa Aktar</button>
+    <button class="btn btn-sm btn-ghost" onclick="printReport()">🖨 Rapor</button>
+    <button class="btn btn-sm btn-primary" onclick="openDeptModal()">+ Bölüm Ekle</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div style="padding:0 0 8px">
+      <div class="sidebar-section">Genel</div>
+      <button class="nav-item active" onclick="showPage('company')" id="nav-company">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1.5"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M8 8v3M6 10h4"/></svg>
+        Şirket Geneli
+      </button>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="sidebar-section">Bölümler</div>
+    <div id="dept-nav-list"></div>
+    <div class="nav-divider"></div>
+    <div class="sidebar-section">Araçlar</div>
+    <button class="nav-item" onclick="showPage('simulate')" id="nav-simulate">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      Simülasyon
+    </button>
+    <div class="sidebar-bottom">
+      <button class="btn btn-sm btn-ghost" style="width:100%;justify-content:center" onclick="openSettingsModal()">⚙ Ayarlar</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- COMPANY PAGE -->
+    <div id="page-company" class="page active">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Şirket Geneli İş Gücü Durumu</h1>
+          <p id="company-last-updated">Tüm bölümler · <span id="dept-count-sub">0 bölüm</span></p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-sm" onclick="openDeptModal()">+ Bölüm Ekle</button>
+        </div>
+      </div>
+      <div class="metrics-grid" id="company-metrics"></div>
+      <div id="company-alerts"></div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Bölüm kullanım oranları</span></div>
+          <div class="chart-wrap"><canvas id="companyBarChart" role="img" aria-label="Bölüm bazlı kullanım oranları"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Kategori dağılımı (şirket ortalaması)</span></div>
+          <div class="chart-wrap"><canvas id="companyDonutChart" role="img" aria-label="Şirket geneli kategori dağılımı"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Bölüm özet tablosu</span></div>
+        <div class="tbl-wrap">
+          <table class="tbl" id="company-table">
+            <thead><tr><th>Bölüm</th><th>Çalışan</th><th>İş Yükü</th><th>Kapasite</th><th>Kullanım</th><th>Aşırı Yüklü</th><th>Dav.&Tek.</th><th>Stratejik</th><th>Proje</th><th>Operasy.</th><th></th></tr></thead>
+            <tbody id="company-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="dept-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:4px"></div>
+    </div>
+
+    <!-- DEPT PAGE -->
+    <div id="page-dept" class="page">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 id="dept-page-title">Bölüm</h1>
+          <p id="dept-page-sub">Ekip iş gücü analizi</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-sm" onclick="openAddPersonModal()">+ Kişi Ekle</button>
+          <button class="btn btn-sm btn-ghost" onclick="editCurrentDept()">Bölümü Düzenle</button>
+        </div>
+      </div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="showDeptTab('overview')">Genel Bakış</button>
+        <button class="tab-btn" onclick="showDeptTab('people')">Ekip</button>
+        <button class="tab-btn" onclick="showDeptTab('tasks')">Görev Dağılımı</button>
+        <button class="tab-btn" onclick="showDeptTab('details')">Kişi Detayları</button>
+      </div>
+      <div id="dept-tab-overview" class="tab-panel active">
+        <div class="metrics-grid" id="dept-metrics"></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#1D4ED8"></div>Davranışsal & Teknik</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#15803D"></div>Org. & Stratejik</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#B45309"></div>Proje</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#B91C1C"></div>Operasyonel</div>
+        </div>
+        <div id="dept-person-bars"></div>
+        <div class="card" style="margin-top:4px">
+          <div class="card-title" style="margin-bottom:12px">Ekip karşılaştırması</div>
+          <div class="chart-wrap"><canvas id="deptBarChart" role="img" aria-label="Bölüm ekip iş yükü karşılaştırması"></canvas></div>
+        </div>
+      </div>
+      <div id="dept-tab-people" class="tab-panel">
+        <div id="dept-people-list"></div>
+      </div>
+      <div id="dept-tab-tasks" class="tab-panel">
+        <div id="dept-tasks-content"></div>
+      </div>
+      <div id="dept-tab-details" class="tab-panel">
+        <div id="dept-details-content"></div>
+      </div>
+    </div>
+
+    <!-- SIMULATE PAGE -->
+    <div id="page-simulate" class="page">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>İşe Alım Simülasyonu</h1>
+          <p>Yeni pozisyonun ekip dengesine etkisini önceden görün</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px">Pozisyon parametreleri</div>
+        <div class="form-grid-3">
+          <div class="field"><label>Bölüm</label>
+            <select id="sim-dept"><option value="">Bölüm seçin...</option></select>
+          </div>
+          <div class="field"><label>Pozisyon adı</label><input type="text" id="sim-pos" value="Satış Mühendisi" /></div>
+          <div class="field"><label>Aylık kapasite (saat)</label><input type="number" id="sim-cap" value="180" min="80" max="300" /></div>
+        </div>
+        <div class="field"><label>Planlanan görevler / notlar</label><textarea id="sim-notes" placeholder="Bu kişiye devredilecek görevler veya sorumluluklara dair notlar..."></textarea></div>
+        <div class="divider"></div>
+        <p style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:10px">Beklenen iş yükü dağılımı</p>
+        <div class="slider-row"><label class="slider-label">Davranışsal & Teknik Gelişim</label><input type="range" id="ss1" min="0" max="90" step="1" value="25" oninput="syncSim()"><span class="slider-val" id="sv1">25%</span></div>
+        <div class="slider-row"><label class="slider-label">Org. Gelişim & Stratejik</label><input type="range" id="ss2" min="0" max="90" step="1" value="15" oninput="syncSim()"><span class="slider-val" id="sv2">15%</span></div>
+        <div class="slider-row"><label class="slider-label">Proje Çalışmaları</label><input type="range" id="ss3" min="0" max="90" step="1" value="10" oninput="syncSim()"><span class="slider-val" id="sv3">10%</span></div>
+        <div class="slider-row"><label class="slider-label">Operasyonel İşler</label><input type="range" id="ss4" min="0" max="90" step="1" value="50" oninput="syncSim()"><span class="slider-val" id="sv4">50%</span></div>
+        <div class="sum-pill sum-ok" id="sim-sum">Toplam: 100% ✓</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-lg" onclick="runSimulation()">Simülasyonu Çalıştır</button>
+          <button class="btn btn-lg" onclick="runAIAnalysis()" id="ai-btn">✦ Claude ile Analiz Et</button>
+        </div>
+      </div>
+      <div id="sim-result"></div>
+      <div id="ai-result"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+
+<!-- ADD/EDIT DEPT MODAL -->
+<div class="modal-bg" id="modal-dept">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-dept-title">Yeni Bölüm Ekle</div>
+      <button class="btn-icon" onclick="closeModal('modal-dept')">✕</button>
+    </div>
+    <div class="field"><label>Bölüm adı *</label><input type="text" id="dept-name-input" placeholder="Örn. Satış & İş Geliştirme" /></div>
+    <div class="field"><label>Açıklama</label><input type="text" id="dept-desc-input" placeholder="Kısa açıklama (isteğe bağlı)" /></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal('modal-dept')">İptal</button>
+      <button class="btn btn-primary" onclick="saveDept()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT PERSON MODAL -->
+<div class="modal-bg" id="modal-person">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-person-title">Çalışan Ekle</div>
+      <button class="btn-icon" onclick="closeModal('modal-person')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Ad Soyad *</label><input type="text" id="p-name" placeholder="Örn. Ayşe Kaya" /></div>
+      <div class="field"><label>Unvan *</label><input type="text" id="p-title" placeholder="Örn. Satış Mühendisi" /></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Başlangıç tarihi</label><input type="date" id="p-date" /></div>
+      <div class="field"><label>Aylık kapasite (saat)</label><input type="number" id="p-cap" value="180" min="80" max="300" /></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Hesaplanan toplam iş yükü (saat)</label><input type="number" id="p-hours" placeholder="Görevlerden otomatik veya manuel" min="0" step="0.5" /></div>
+      <div class="field"><label>Networking / diğer (saat/ay)</label><input type="number" id="p-networking" value="0" min="0" step="0.5" /></div>
+    </div>
+    <div class="field"><label>Notlar</label><textarea id="p-notes" placeholder="Özel durumlar, yorumlar..."></textarea></div>
+    <div class="divider"></div>
+    <p style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin-bottom:10px">İş Yükü Dağılımı (toplam 100%)</p>
+    <div class="slider-row"><label class="slider-label" style="min-width:170px">Davranışsal & Teknik</label><input type="range" id="pa1" min="0" max="90" step="1" value="25" oninput="syncPerson()"><span class="slider-val" id="pv1">25%</span></div>
+    <div class="slider-row"><label class="slider-label" style="min-width:170px">Org. & Stratejik</label><input type="range" id="pa2" min="0" max="90" step="1" value="15" oninput="syncPerson()"><span class="slider-val" id="pv2">15%</span></div>
+    <div class="slider-row"><label class="slider-label" style="min-width:170px">Proje Çalışmaları</label><input type="range" id="pa3" min="0" max="90" step="1" value="10" oninput="syncPerson()"><span class="slider-val" id="pv3">10%</span></div>
+    <div class="slider-row"><label class="slider-label" style="min-width:170px">Operasyonel İşler</label><input type="range" id="pa4" min="0" max="90" step="1" value="50" oninput="syncPerson()"><span class="slider-val" id="pv4">50%</span></div>
+    <div class="sum-pill sum-ok" id="p-sum">Toplam: 100% ✓</div>
+    <div class="divider"></div>
+    <p style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin-bottom:10px">Görevler</p>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <input type="text" id="t-name" style="flex:2;min-width:100px;padding:7px 10px;font-size:13px;border:1px solid var(--bdr-m);border-radius:var(--r);font-family:inherit;outline:none" placeholder="Görev adı" />
+      <select id="t-cat" style="flex:1;min-width:90px;padding:7px 8px;font-size:12px;border:1px solid var(--bdr-m);border-radius:var(--r);font-family:inherit;outline:none;background:var(--surf)">
+        <option value="0">Dav.&Tek.</option><option value="1">Stratejik</option><option value="2">Proje</option><option value="3">Operasyonel</option>
+      </select>
+      <input type="number" id="t-hrs" style="width:70px;padding:7px 8px;font-size:13px;border:1px solid var(--bdr-m);border-radius:var(--r);font-family:inherit;outline:none" placeholder="Sa/ay" min="0.5" step="0.5" />
+      <button class="btn btn-sm" onclick="addModalTask()">+ Ekle</button>
+    </div>
+    <div id="modal-tasks-list"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal('modal-person')">İptal</button>
+      <button class="btn btn-primary" onclick="savePerson()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">CSV İçe Aktar</div>
+      <button class="btn-icon" onclick="closeModal('modal-import')">✕</button>
+    </div>
+    <div class="field"><label>Hedef bölüm</label>
+      <select id="import-dept"><option value="">Bölüm seçin veya yeni oluşturun...</option><option value="__new__">+ Yeni bölüm oluştur</option></select>
+    </div>
+    <div class="field" id="import-new-dept-field" style="display:none"><label>Yeni bölüm adı</label><input type="text" id="import-new-dept-name" placeholder="Bölüm adı" /></div>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-file').click()">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <strong>CSV dosyası seçin veya sürükleyin</strong>
+      <p>Ad, Unvan, Kapasite, Hesaplanan Saat, Dav%, Str%, Prj%, Ops%</p>
+    </div>
+    <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSV(this)" />
+    <div id="import-preview" style="margin-top:12px"></div>
+    <div class="divider"></div>
+    <div style="background:var(--surf2);border-radius:var(--r);padding:12px;font-size:12px;color:var(--txt2);margin-bottom:14px">
+      <strong>CSV formatı:</strong> İlk satır başlık satırı olmalı.<br>
+      Sütunlar: <code>Ad Soyad, Unvan, Kapasite, HesaplananSaat, Dav, Str, Prj, Ops, Networking, Notlar</code><br>
+      Yüzdeler sayı olarak (örn. 26 → %26). Toplam 100 olmalı.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-import')">İptal</button>
+      <button class="btn btn-primary" id="import-btn" onclick="doImport()" disabled>İçe Aktar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="modal-settings">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Ayarlar</div>
+      <button class="btn-icon" onclick="closeModal('modal-settings')">✕</button>
+    </div>
+    <div class="field"><label>Şirket adı</label><input type="text" id="setting-company" placeholder="TKG Otomotiv" /></div>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:4px">
+      <button class="btn btn-danger btn-sm" onclick="resetAllData()">Tüm verileri sıfırla</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('modal-settings')">İptal</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://zfuxecleedvjjfvzulpr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Rsc4FbloFl2RstF0y-Zqjw_OtLh75VC';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Admin e-posta — bu kullanıcı her şeyi görür ve düzenleyebilir
+const ADMIN_EMAIL = 'ozge.basoglu@tkg.com.tr'; // <-- buraya kendi mailinizi yazın
+
+let currentUser = null;
+let isAdmin = false;
+let userDeptIds = []; // bölüm müdürü ise izinli bölüm id'leri
+
+// ── AUTH FONKSİYONLARI ──────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+  btn.textContent = 'Giriş yapılıyor...'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.textContent = 'Giriş Yap'; btn.disabled = false;
+  if (error) { err.style.display = 'block'; return; }
+  await onLogin(data.user);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; isAdmin = false; userDeptIds = [];
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('logout-btn').style.display = 'none';
+  document.getElementById('user-email-badge').textContent = '';
+  document.getElementById('sync-badge').style.display = 'none';
+  DB = { companyName: 'TKG Otomotiv', departments: [] };
+}
+
+async function onLogin(user) {
+  currentUser = user;
+  isAdmin = user.email === ADMIN_EMAIL;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('logout-btn').style.display = '';
+  document.getElementById('user-email-badge').textContent = user.email;
+
+  // Bölüm müdürü ise izinli bölümleri çek
+  if (!isAdmin) {
+    const { data } = await sb.from('user_departments').select('department_id').eq('user_id', user.id);
+    userDeptIds = (data || []).map(r => r.department_id);
+    // Admin butonlarını gizle
+    document.querySelectorAll('.btn-primary, .btn-ghost').forEach(b => {
+      if (b.textContent.includes('Bölüm Ekle') || b.textContent.includes('CSV') ||
+          b.textContent.includes('Aktar') || b.textContent.includes('Ayar')) {
+        b.style.display = 'none';
+      }
+    });
+  }
+
+  await loadFromSupabase();
+}
+
+// ── SUPABASE VERİ OKUMA ──────────────────────────────────────
+async function loadFromSupabase() {
+  setSyncBadge('ing', 'Yükleniyor...');
+  try {
+    // Bölümleri çek
+    let deptQuery = sb.from('departments').select('*').order('name');
+    if (!isAdmin && userDeptIds.length > 0) {
+      deptQuery = deptQuery.in('id', userDeptIds);
+    } else if (!isAdmin && userDeptIds.length === 0) {
+      DB = { companyName: 'TKG Otomotiv', departments: [] };
+      setSyncBadge('ok', 'Bağlandı');
+      renderSidebar(); renderCompany(); return;
+    }
+    const { data: depts, error: dErr } = await deptQuery;
+    if (dErr) throw dErr;
+
+    // Çalışanları ve görevleri çek
+    const deptIds = depts.map(d => d.id);
+    const { data: emps, error: eErr } = await sb.from('employees')
+      .select('*').in('department_id', deptIds).order('name');
+    if (eErr) throw eErr;
+
+    const empIds = emps.map(e => e.id);
+    let tasks = [];
+    if (empIds.length > 0) {
+      const { data: t, error: tErr } = await sb.from('tasks')
+        .select('*').in('employee_id', empIds).order('category');
+      if (tErr) throw tErr;
+      tasks = t || [];
+    }
+
+    // DB yapısına dönüştür
+    DB.departments = depts.map(d => ({
+      id: d.id,
+      name: d.name,
+      desc: d.description || '',
+      employees: emps
+        .filter(e => e.department_id === d.id)
+        .map(e => ({
+          id: e.id,
+          name: e.name,
+          title: e.title || '',
+          capacity: e.capacity || 180,
+          hours: parseFloat(e.hours) || 0,
+          pcts: [e.pct_behavioral||0, e.pct_strategic||0, e.pct_project||0, e.pct_operational||0],
+          networking: parseFloat(e.networking) || 0,
+          startDate: e.start_date || '',
+          notes: e.notes || '',
+          tasks: tasks.filter(t => t.employee_id === e.id).map(t => ({
+            name: t.name,
+            cat: t.category || 0,
+            hours: parseFloat(t.hours) || 0
+          }))
+        }))
+    }));
+
+    setSyncBadge('ok', '✓ Senkronize');
+    renderSidebar(); renderCompany();
+  } catch(e) {
+    console.error(e);
+    setSyncBadge('err', 'Bağlantı hatası');
+  }
+}
+
+// ── SUPABASE VERİ YAZMA ──────────────────────────────────────
+async function saveDeptToSupabase(dept) {
+  if (!isAdmin) return;
+  setSyncBadge('ing', 'Kaydediliyor...');
+  const { error } = await sb.from('departments').upsert({
+    id: dept.id, name: dept.name, description: dept.desc || ''
+  });
+  if (error) { setSyncBadge('err', 'Kayıt hatası'); console.error(error); return; }
+  setSyncBadge('ok', '✓ Kaydedildi');
+}
+
+async function deleteDeptFromSupabase(deptId) {
+  if (!isAdmin) return;
+  await sb.from('departments').delete().eq('id', deptId);
+}
+
+async function savePersonToSupabase(emp, deptId) {
+  if (!isAdmin) return;
+  setSyncBadge('ing', 'Kaydediliyor...');
+  // Çalışanı kaydet
+  const { error: eErr } = await sb.from('employees').upsert({
+    id: emp.id,
+    department_id: deptId,
+    name: emp.name,
+    title: emp.title,
+    capacity: emp.capacity,
+    hours: emp.hours,
+    pct_behavioral:  emp.pcts[0],
+    pct_strategic:   emp.pcts[1],
+    pct_project:     emp.pcts[2],
+    pct_operational: emp.pcts[3],
+    networking: emp.networking || 0,
+    start_date: emp.startDate || null,
+    notes: emp.notes || ''
+  });
+  if (eErr) { setSyncBadge('err', 'Kayıt hatası'); console.error(eErr); return; }
+
+  // Görevleri sil ve yeniden ekle
+  await sb.from('tasks').delete().eq('employee_id', emp.id);
+  if (emp.tasks && emp.tasks.length > 0) {
+    const taskRows = emp.tasks.map(t => ({
+      employee_id: emp.id,
+      name: t.name,
+      category: t.cat,
+      hours: t.hours
+    }));
+    const { error: tErr } = await sb.from('tasks').insert(taskRows);
+    if (tErr) console.error(tErr);
+  }
+  setSyncBadge('ok', '✓ Kaydedildi');
+}
+
+async function deletePersonFromSupabase(personId) {
+  if (!isAdmin) return;
+  await sb.from('employees').delete().eq('id', personId);
+}
+
+// CSV import için toplu kayıt
+async function importToSupabase(deptId, rows) {
+  if (!isAdmin) return;
+  setSyncBadge('ing', 'İçe aktarılıyor...');
+  for (const r of rows) {
+    const emp = { id: r.id, department_id: deptId, name: r.name, title: r.title,
+      capacity: r.capacity, hours: r.hours,
+      pct_behavioral: r.pcts[0], pct_strategic: r.pcts[1],
+      pct_project: r.pcts[2], pct_operational: r.pcts[3],
+      networking: r.networking || 0, notes: r.notes || '' };
+    await sb.from('employees').upsert(emp);
+  }
+  setSyncBadge('ok', '✓ Aktarıldı');
+}
+
+function setSyncBadge(type, text) {
+  const b = document.getElementById('sync-badge');
+  b.style.display = '';
+  b.className = 'sync-badge sync-' + type;
+  b.textContent = text;
+}
+
+// ── AUTH STATE DEĞİŞİMİ ──────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+    await onLogin(session.user);
+  }
+});
+
+// Sayfa yüklendiğinde oturum kontrolü
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) {
+    onLogin(session.user);
+  }
+});
+
+// Enter tuşuyla giriş
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    doLogin();
+  }
+});
+
+// ============================================================
+// DATA MODEL
+// ============================================================
+const COLORS = ['#1D4ED8','#15803D','#B45309','#B91C1C'];
+const CAT_NAMES = ['Davranışsal & Teknik','Org. & Stratejik','Proje','Operasyonel'];
+const CAT_SHORT = ['Dav.&Tek.','Stratejik','Proje','Operasy.'];
+const STORAGE_KEY = 'tkg_platform_v1';
+
+const DEFAULT_DATA = {
+  companyName: 'TKG Otomotiv',
+  departments: [
+    {
+      id: 'dept_satis', name: 'Satış & İş Geliştirme', desc: '2025 verileri',
+      employees: [
+        {id:'nd',name:'Nigar Demirel',title:'Satış Mühendisi',capacity:180,hours:159.5,pcts:[26,5,10,59],networking:10,startDate:'2024-01-15',notes:'',
+         tasks:[{name:'Pestel Sunum Araştırması',cat:0,hours:20},{name:'Power BI öğrenme',cat:0,hours:8},{name:'T30 Aktivitesi',cat:2,hours:15},{name:'Teklif Süreci',cat:3,hours:48},{name:'Bölüm & PGG Toplantıları',cat:3,hours:14},{name:'ZFI Toplantısı',cat:3,hours:2},{name:'Pestel Toplantısı',cat:1,hours:4},{name:'Alternatif tedarikçi görüşmesi',cat:3,hours:3}]},
+        {id:'yb',name:'Yaren Balaban',title:'Satış Kıdemli Mühendisi',capacity:180,hours:251,pcts:[23,26,7,44],networking:13,startDate:'2023-03-01',notes:'Aşırı yüklü — öncelikli yük azaltma gerekiyor.',
+         tasks:[{name:'APQP Eğitimi',cat:0,hours:15},{name:'FMEA Eğitimi',cat:0,hours:15},{name:'İç Denetçi Eğitimi',cat:0,hours:15},{name:'Teklif Süreci',cat:3,hours:48},{name:'Haftalık Toplantılar',cat:3,hours:16},{name:'VSRM Projesi',cat:2,hours:10},{name:'Power BI Projesi',cat:2,hours:2},{name:'Sözleşme Hazırlıkları',cat:1,hours:6},{name:'Pestel Toplantısı',cat:1,hours:4},{name:'Müşteri portföyü',cat:1,hours:2}]},
+        {id:'uo',name:'Uğur Özgünlü',title:'Satış Yöneticisi',capacity:180,hours:237,pcts:[13,56,12,19],networking:13,startDate:'2022-06-01',notes:'Stratejik ağırlık yüksek — operasyonel delegasyon önerilir.',
+         tasks:[{name:'Yeni Teklif Süreci',cat:3,hours:110},{name:'Çalışan Gelişimi (Koçluk)',cat:0,hours:12},{name:'T30 Aktivitesi',cat:2,hours:30},{name:'Müşteri Toplantıları',cat:3,hours:8},{name:'VSRM İyileştirme',cat:2,hours:10},{name:'Pestel Araştırma',cat:0,hours:4}]}
+      ]
+    }
+  ]
+};
+
+let DB = { companyName: 'TKG Otomotiv', departments: [] };
+let currentDeptId = null;
+let currentDeptTab = 'overview';
+let editingDeptId = null;
+let editingPersonId = null;
+let editingPersonDeptId = null;
+let modalTasks = [];
+let importRows = [];
+let deptChart = null;
+let companyBarChart = null;
+let companyDonutChart = null;
+
+// ============================================================
+// PERSISTENCE — Supabase öncelikli, localStorage yedek
+// ============================================================
+function loadDB() {
+  // Supabase'den yükleme onLogin → loadFromSupabase() ile yapılıyor
+  // localStorage sadece offline yedek olarak kullanılır
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) DB = JSON.parse(s);
+  } catch(e) {}
+}
+function saveDB() {
+  // localStorage'a da yaz (yedek)
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e) {}
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function uid() { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+function initials(n) { return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function utilRate(p) { return p.capacity > 0 ? Math.round(p.hours/p.capacity*100) : 0; }
+function utilClass(r) { return r > 110 ? 'warn' : r > 90 ? 'info' : 'good'; }
+function utilBadgeClass(r) { return r > 110 ? 'badge-warn' : r > 95 ? 'badge-amber' : 'badge-ok'; }
+function deptStats(dept) {
+  const emps = dept.employees || [];
+  const total = emps.reduce((a,p)=>a+p.hours,0);
+  const cap = emps.reduce((a,p)=>a+p.capacity,0);
+  const over = emps.filter(p=>p.hours>p.capacity).length;
+  const rate = cap > 0 ? Math.round(total/cap*100) : 0;
+  const avgPcts = CAT_NAMES.map((_,i) => emps.length ? Math.round(emps.reduce((a,p)=>a+p.pcts[i],0)/emps.length) : 0);
+  return {total, cap, over, rate, avgPcts, count: emps.length};
+}
+
+// ============================================================
+// NAV / PAGES
+// ============================================================
+function showPage(id, deptId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item,.dept-nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+
+  if (id === 'company') {
+    document.getElementById('nav-company').classList.add('active');
+    renderCompany();
+  } else if (id === 'dept' && deptId) {
+    currentDeptId = deptId;
+    document.getElementById('nav-simulate')?.classList.remove('active');
+    const btn = document.querySelector(`.dept-nav-item[data-id="${deptId}"]`);
+    if (btn) btn.classList.add('active');
+    showDeptTab('overview');
+    renderDeptPage();
+  } else if (id === 'simulate') {
+    document.getElementById('nav-simulate').classList.add('active');
+    renderSimulatePage();
+  }
+}
+
+function showDeptTab(tab) {
+  currentDeptTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['overview','people','tasks','details'][i]===tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('dept-tab-'+tab).classList.add('active');
+  if (tab==='people') renderDeptPeople();
+  else if (tab==='tasks') renderDeptTasks();
+  else if (tab==='details') renderDeptDetails();
+  else renderDeptOverview();
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function renderSidebar() {
+  const list = document.getElementById('dept-nav-list');
+  list.innerHTML = DB.departments.map(d => {
+    const s = deptStats(d);
+    return `<button class="dept-nav-item" data-id="${d.id}" onclick="showPage('dept','${d.id}')">
+      <span>${d.name}</span>
+      <span class="dept-badge ${s.over>0?'over':''}">${s.count}</span>
+    </button>`;
+  }).join('');
+  // sim dept select
+  const sel = document.getElementById('sim-dept');
+  if (sel) {
+    sel.innerHTML = '<option value="">Bölüm seçin...</option>' +
+      DB.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  }
+  const impSel = document.getElementById('import-dept');
+  if (impSel) {
+    impSel.innerHTML = '<option value="">Bölüm seçin...</option>' +
+      DB.departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('') +
+      '<option value="__new__">+ Yeni bölüm oluştur</option>';
+  }
+  document.getElementById('company-name-badge').textContent = DB.companyName;
+}
+
+// ============================================================
+// COMPANY PAGE
+// ============================================================
+function renderCompany() {
+  const depts = DB.departments;
+  const totalEmp = depts.reduce((a,d)=>a+(d.employees||[]).length,0);
+  const totalHours = depts.reduce((a,d)=>a+deptStats(d).total,0);
+  const totalCap = depts.reduce((a,d)=>a+deptStats(d).cap,0);
+  const overDepts = depts.filter(d=>deptStats(d).rate>100).length;
+  const overPeople = depts.reduce((a,d)=>a+(d.employees||[]).filter(p=>p.hours>p.capacity).length,0);
+  const avgUtil = totalCap>0 ? Math.round(totalHours/totalCap*100) : 0;
+
+  document.getElementById('dept-count-sub').textContent = `${depts.length} bölüm · ${totalEmp} çalışan`;
+  document.getElementById('company-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Toplam bölüm</div><div class="metric-value info">${depts.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Toplam çalışan</div><div class="metric-value">${totalEmp}</div></div>
+    <div class="metric-card"><div class="metric-label">Toplam iş yükü</div><div class="metric-value">${Math.round(totalHours)} sa</div><div class="metric-sub">aylık</div></div>
+    <div class="metric-card"><div class="metric-label">Toplam kapasite</div><div class="metric-value">${Math.round(totalCap)} sa</div><div class="metric-sub">aylık</div></div>
+    <div class="metric-card"><div class="metric-label">Ort. kullanım</div><div class="metric-value ${utilClass(avgUtil)}">${avgUtil}%</div></div>
+    <div class="metric-card"><div class="metric-label">Aşırı yüklü bölüm</div><div class="metric-value ${overDepts>0?'warn':'good'}">${overDepts}</div></div>
+    <div class="metric-card"><div class="metric-label">Aşırı yüklü kişi</div><div class="metric-value ${overPeople>0?'warn':'good'}">${overPeople}</div></div>
+  `;
+
+  // Alerts
+  const alerts = [];
+  depts.forEach(d => {
+    const s = deptStats(d);
+    if (s.rate > 120) alerts.push({type:'warn', msg:`<strong>${d.name}</strong> bölümü kritik aşırı yükte — ortalama kullanım %${s.rate}`});
+    else if (s.rate > 100) alerts.push({type:'amber', msg:`<strong>${d.name}</strong> bölümü kapasitesinin üzerinde — %${s.rate} kullanım`});
+  });
+  document.getElementById('company-alerts').innerHTML = alerts.map(a=>
+    `<div class="alert alert-${a.type}"><span>⚠</span><span>${a.msg}</span></div>`).join('');
+
+  // Table
+  document.getElementById('company-tbody').innerHTML = depts.length ? depts.map(d => {
+    const s = deptStats(d);
+    return `<tr>
+      <td><strong>${d.name}</strong>${d.desc?`<span style="font-size:11px;color:var(--txt3);margin-left:6px">${d.desc}</span>`:''}</td>
+      <td>${s.count}</td>
+      <td style="font-family:'DM Mono',monospace">${Math.round(s.total)} sa</td>
+      <td style="font-family:'DM Mono',monospace">${s.cap} sa</td>
+      <td><span class="badge ${utilBadgeClass(s.rate)}">${s.rate}%</span></td>
+      <td>${s.over>0?`<span class="badge badge-warn">${s.over} kişi</span>`:'<span class="badge badge-ok">Yok</span>'}</td>
+      ${s.avgPcts.map(v=>`<td style="font-family:'DM Mono',monospace;font-size:12px">${v}%</td>`).join('')}
+      <td><button class="btn btn-sm btn-ghost" onclick="showPage('dept','${d.id}')">Görüntüle →</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="11" style="text-align:center;color:var(--txt3);padding:32px">Henüz bölüm eklenmedi.</td></tr>`;
+
+  // Charts
+  renderCompanyCharts(depts);
+
+  // Dept overview cards
+  document.getElementById('dept-cards-grid').innerHTML = depts.map(d => {
+    const s = deptStats(d);
+    return `<div class="dept-overview-card" onclick="showPage('dept','${d.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--txt)">${d.name}</div>
+        <span class="badge ${utilBadgeClass(s.rate)}">${s.rate}%</span>
+      </div>
+      <div style="font-size:12px;color:var(--txt3);margin-bottom:8px">${s.count} çalışan · ${Math.round(s.total)} / ${s.cap} sa</div>
+      <div class="util-bar">
+        <div class="util-track" style="flex:1"><div class="util-fill" style="width:${Math.min(s.rate,100)}%;background:${s.rate>100?'var(--red)':s.rate>85?'var(--amber)':'var(--green)'}"></div></div>
+      </div>
+      ${s.over>0?`<div style="font-size:11px;color:var(--red);margin-top:6px">⚠ ${s.over} kişi aşırı yüklü</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderCompanyCharts(depts) {
+  if (!depts.length) return;
+  const labels = depts.map(d=>d.name.length>12?d.name.slice(0,12)+'…':d.name);
+  const rates = depts.map(d=>deptStats(d).rate);
+  const colors = rates.map(r=>r>100?'#B91C1C':r>85?'#B45309':'#15803D');
+
+  if (companyBarChart) companyBarChart.destroy();
+  const ctx1 = document.getElementById('companyBarChart');
+  if (ctx1) companyBarChart = new Chart(ctx1, {
+    type:'bar',
+    data:{labels, datasets:[{label:'Kullanım %',data:rates,backgroundColor:colors,borderWidth:0,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{max:150,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(0,0,0,0.04)'},
+          title:{display:true,text:'Kullanım %',font:{size:10}}}}}
+  });
+
+  // Donut — company average
+  const allEmps = depts.flatMap(d=>d.employees||[]);
+  const avgPcts = CAT_NAMES.map((_,i)=>allEmps.length?Math.round(allEmps.reduce((a,p)=>a+p.pcts[i],0)/allEmps.length):0);
+  if (companyDonutChart) companyDonutChart.destroy();
+  const ctx2 = document.getElementById('companyDonutChart');
+  if (ctx2) companyDonutChart = new Chart(ctx2, {
+    type:'doughnut',
+    data:{labels:CAT_NAMES,datasets:[{data:avgPcts,backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}%`}}}}
+  });
+}
+
+// ============================================================
+// DEPT PAGE
+// ============================================================
+function currentDept() { return DB.departments.find(d=>d.id===currentDeptId); }
+
+function renderDeptPage() {
+  const dept = currentDept();
+  if (!dept) return;
+  const s = deptStats(dept);
+  document.getElementById('dept-page-title').textContent = dept.name;
+  document.getElementById('dept-page-sub').textContent = `${s.count} çalışan · ${dept.desc||''}`;
+  renderDeptOverview();
+}
+
+function renderDeptOverview() {
+  const dept = currentDept(); if(!dept) return;
+  const emps = dept.employees||[];
+  const s = deptStats(dept);
+
+  document.getElementById('dept-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Çalışan sayısı</div><div class="metric-value info">${s.count}</div></div>
+    <div class="metric-card"><div class="metric-label">Toplam iş yükü</div><div class="metric-value">${Math.round(s.total)} sa</div><div class="metric-sub">aylık</div></div>
+    <div class="metric-card"><div class="metric-label">Toplam kapasite</div><div class="metric-value">${s.cap} sa</div><div class="metric-sub">aylık</div></div>
+    <div class="metric-card"><div class="metric-label">Ort. kullanım</div><div class="metric-value ${utilClass(s.rate)}">${s.rate}%</div></div>
+    <div class="metric-card"><div class="metric-label">Aşırı yüklü</div><div class="metric-value ${s.over>0?'warn':'good'}">${s.over} kişi</div></div>
+    <div class="metric-card"><div class="metric-label">Kapasite farkı</div><div class="metric-value ${s.total>s.cap?'warn':'good'}">${s.total>s.cap?'-':'+'}${Math.abs(Math.round(s.cap-s.total))} sa</div></div>
+  `;
+
+  document.getElementById('dept-person-bars').innerHTML = emps.map(p=>{
+    const r = utilRate(p);
+    return `<div class="person-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div class="avatar avatar-md">${initials(p.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:600">${p.name}</span>
+            <span class="badge ${utilBadgeClass(r)}">${r}%</span>
+          </div>
+          <div style="font-size:12px;color:var(--txt3)">${p.title} · ${Math.round(p.hours)}/${p.capacity} sa/ay</div>
+        </div>
+      </div>
+      ${p.pcts.map((v,i)=>`<div class="bar-row">
+        <div class="bar-label"><span>${CAT_NAMES[i]}</span><span class="val">${v}%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${COLORS[i]}"></div></div>
+      </div>`).join('')}
+    </div>`;
+  }).join('') || '<div class="empty">Henüz çalışan eklenmedi. "+ Kişi Ekle" butonunu kullanın.</div>';
+
+  // Dept bar chart
+  const ctx = document.getElementById('deptBarChart');
+  if (ctx) {
+    if (deptChart) deptChart.destroy();
+    deptChart = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: emps.map(p=>p.name.split(' ')[0]),
+        datasets: CAT_NAMES.map((cat,i)=>({label:cat,data:emps.map(p=>Math.round(p.hours*p.pcts[i]/100)),backgroundColor:COLORS[i],borderWidth:0,borderRadius:i===CAT_NAMES.length-1?4:0}))
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:12}}},
+          y:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:11}},title:{display:true,text:'Saat/ay',font:{size:10}}}}}
+    });
+  }
+}
+
+function renderDeptPeople() {
+  const dept = currentDept(); if(!dept) return;
+  const emps = dept.employees||[];
+  document.getElementById('dept-people-list').innerHTML = emps.map(p => {
+    const r = utilRate(p);
+    const taskTotal = (p.tasks||[]).reduce((a,t)=>a+t.hours,0);
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div class="avatar avatar-lg">${initials(p.name)}</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600;margin-bottom:2px">${p.name}</div>
+          <div style="font-size:12px;color:var(--txt3)">${p.title}${p.startDate?` · Başlangıç: ${p.startDate}`:''}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="openEditPersonModal('${dept.id}','${p.id}')">Düzenle</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePerson('${dept.id}','${p.id}')">Sil</button>
+        </div>
+      </div>
+      <div class="metrics-grid" style="margin-bottom:14px">
+        <div class="metric-card card-sm"><div class="metric-label">İş Yükü</div><div class="metric-value" style="font-size:18px">${Math.round(p.hours)} sa</div></div>
+        <div class="metric-card card-sm"><div class="metric-label">Kapasite</div><div class="metric-value" style="font-size:18px">${p.capacity} sa</div></div>
+        <div class="metric-card card-sm"><div class="metric-label">Kullanım</div><div class="metric-value ${utilClass(r)}" style="font-size:18px">${r}%</div></div>
+        ${p.networking>0?`<div class="metric-card card-sm"><div class="metric-label">Networking</div><div class="metric-value" style="font-size:18px">${p.networking} sa</div></div>`:''}
+      </div>
+      ${p.pcts.map((v,i)=>`<div class="bar-row">
+        <div class="bar-label"><span>${CAT_NAMES[i]}</span><span class="val">${v}%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${COLORS[i]}"></div></div>
+      </div>`).join('')}
+      ${p.notes?`<div style="margin-top:10px;font-size:12px;color:var(--txt2);background:var(--surf2);border-radius:var(--r);padding:8px 10px">📝 ${p.notes}</div>`:''}
+      ${p.tasks&&p.tasks.length?`
+        <div class="divider"></div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px">Görevler · ${Math.round(taskTotal)} sa/ay</div>
+        ${p.tasks.map(t=>`<div class="task-item">
+          <div style="display:flex;align-items:center;gap:8px"><span class="task-cat task-cat-${t.cat}">${CAT_SHORT[t.cat]}</span><span style="font-size:13px">${t.name}</span></div>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--txt)">${t.hours} sa/ay</span>
+        </div>`).join('')}
+      `:''}
+    </div>`;
+  }).join('') || '<div class="empty">Henüz çalışan eklenmedi.</div>';
+}
+
+function renderDeptTasks() {
+  const dept = currentDept(); if(!dept) return;
+  const emps = dept.employees||[];
+  const allTasks = emps.flatMap(p=>(p.tasks||[]).map(t=>({...t,personName:p.name,personTitle:p.title})));
+
+  // Group by category
+  const byCategory = CAT_NAMES.map((cat,catIdx)=>({cat,catIdx,tasks:allTasks.filter(t=>t.cat===catIdx)}));
+  const totalByCategory = byCategory.map(b=>b.tasks.reduce((a,t)=>a+t.hours,0));
+  const grandTotal = totalByCategory.reduce((a,b)=>a+b,0);
+
+  document.getElementById('dept-tasks-content').innerHTML = `
+    <div class="metrics-grid" style="margin-bottom:16px">
+      ${byCategory.map((b,i)=>`
+        <div class="metric-card card-sm">
+          <div class="metric-label" style="color:${COLORS[i]}">${b.cat}</div>
+          <div class="metric-value" style="font-size:18px">${Math.round(totalByCategory[i])} sa</div>
+          <div class="metric-sub">${grandTotal>0?Math.round(totalByCategory[i]/grandTotal*100):0}% payı</div>
+        </div>`).join('')}
+    </div>
+    ${byCategory.map((b,i)=>b.tasks.length?`
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-header">
+          <span class="card-title-lg" style="color:${COLORS[i]}">${b.cat}</span>
+          <span style="font-size:12px;color:var(--txt3);font-family:'DM Mono',monospace">${Math.round(totalByCategory[i])} sa/ay</span>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Görev</th><th>Kişi</th><th>Sa/ay</th></tr></thead>
+            <tbody>
+              ${b.tasks.map(t=>`<tr>
+                <td>${t.name}</td>
+                <td style="color:var(--txt3)">${t.personName}</td>
+                <td style="font-family:'DM Mono',monospace;font-weight:600">${t.hours}</td>
+              </tr>`).join('')}
+              <tr style="background:var(--surf2)"><td colspan="2" style="font-weight:600">Toplam</td><td style="font-family:'DM Mono',monospace;font-weight:700">${Math.round(totalByCategory[i])}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`:''
+    ).join('')}
+  `;
+}
+
+function renderDeptDetails() {
+  const dept = currentDept(); if(!dept) return;
+  const emps = dept.employees||[];
+
+  document.getElementById('dept-details-content').innerHTML = `
+    <div class="tbl-wrap card" style="padding:0;overflow:hidden">
+      <table class="tbl">
+        <thead><tr>
+          <th>Kişi</th><th>Unvan</th><th>İş Yükü</th><th>Kapasite</th><th>Kullanım</th><th>Fark</th>
+          ${CAT_SHORT.map(c=>`<th>${c}</th>`).join('')}
+          <th>Networking</th><th>Başlangıç</th>
+        </tr></thead>
+        <tbody>
+          ${emps.map(p=>{
+            const r=utilRate(p);
+            const diff=Math.round(p.hours-p.capacity);
+            return `<tr>
+              <td><div style="display:flex;align-items:center;gap:8px">
+                <div class="avatar avatar-sm">${initials(p.name)}</div>
+                <span style="font-weight:500">${p.name}</span>
+              </div></td>
+              <td style="color:var(--txt3);font-size:12px">${p.title}</td>
+              <td style="font-family:'DM Mono',monospace">${Math.round(p.hours)} sa</td>
+              <td style="font-family:'DM Mono',monospace">${p.capacity} sa</td>
+              <td><span class="badge ${utilBadgeClass(r)}">${r}%</span></td>
+              <td style="font-family:'DM Mono',monospace;color:${diff>0?'var(--red)':'var(--green)'}">${diff>0?'+':''}${diff} sa</td>
+              ${p.pcts.map(v=>`<td style="font-family:'DM Mono',monospace;font-size:12px">${v}%</td>`).join('')}
+              <td style="font-family:'DM Mono',monospace;font-size:12px">${p.networking||0} sa</td>
+              <td style="font-size:12px;color:var(--txt3)">${p.startDate||'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${emps.length>0?`
+      <div class="card" style="margin-top:14px">
+        <div class="card-title" style="margin-bottom:14px">Tüm kişilerin görev özeti</div>
+        ${emps.map(p=>{
+          const tasks=p.tasks||[];
+          if(!tasks.length) return '';
+          const total=tasks.reduce((a,t)=>a+t.hours,0);
+          return `<div style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div class="avatar avatar-sm">${initials(p.name)}</div>
+              <span style="font-weight:600;font-size:13px">${p.name}</span>
+              <span style="font-size:12px;color:var(--txt3)">${p.title}</span>
+              <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--txt2);margin-left:auto">${Math.round(total)} sa/ay</span>
+            </div>
+            ${tasks.map(t=>`<div class="task-item">
+              <div style="display:flex;align-items:center;gap:7px">
+                <span class="task-cat task-cat-${t.cat}">${CAT_SHORT[t.cat]}</span>
+                <span style="font-size:12px">${t.name}</span>
+              </div>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${t.hours} sa</span>
+            </div>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>`:''}
+  `;
+}
+
+// ============================================================
+// SIMULATE PAGE
+// ============================================================
+function renderSimulatePage() {
+  renderSidebar();
+  syncSim();
+}
+
+function syncSim() {
+  const vals = ['ss1','ss2','ss3','ss4'].map(id=>parseInt(document.getElementById(id)?.value||0));
+  ['sv1','sv2','sv3','sv4'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.textContent=vals[i]+'%'; });
+  const total = vals.reduce((a,b)=>a+b,0);
+  const el = document.getElementById('sim-sum');
+  if(el){ el.className='sum-pill '+(total===100?'sum-ok':'sum-err'); el.textContent='Toplam: '+total+'%'+(total===100?' ✓':' (100 olmalı)'); }
+}
+
+function runSimulation() {
+  const deptId = document.getElementById('sim-dept').value;
+  const dept = DB.departments.find(d=>d.id===deptId);
+  if (!dept) { alert('Lütfen bir bölüm seçin.'); return; }
+  const pcts = ['ss1','ss2','ss3','ss4'].map(id=>parseInt(document.getElementById(id).value));
+  if (pcts.reduce((a,b)=>a+b,0)!==100) { alert('Yüzdeler toplamı 100 olmalı.'); return; }
+  const cap = parseInt(document.getElementById('sim-cap').value)||180;
+  const pos = document.getElementById('sim-pos').value||'Yeni Pozisyon';
+  // Sadece gerçek kayıtlı çalışanlar (simülasyon sanal kişilerini hariç tut)
+  const emps = (dept.employees||[]).filter(e=>e.id!=='__sim__');
+  const simHours = Math.round(cap*0.9);
+
+  const before = deptStats(dept);
+  const simEmps = [...emps, {id:'__sim__',name:pos,title:pos,capacity:cap,hours:simHours,pcts,networking:0}];
+  const afterTotal = simEmps.reduce((a,p)=>a+p.hours,0);
+  const afterCap = simEmps.reduce((a,p)=>a+p.capacity,0);
+  const afterRate = Math.round(afterTotal/afterCap*100);
+  const avgAfter = CAT_NAMES.map((_,i)=>Math.round(simEmps.reduce((a,p)=>a+p.pcts[i],0)/simEmps.length));
+
+  document.getElementById('sim-result').innerHTML = `<div class="card" style="animation:fadeIn .2s ease">
+    <div class="card-title" style="margin-bottom:14px">Simülasyon sonucu — ${dept.name} / ${pos}</div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div style="padding:14px;background:var(--surf2);border-radius:var(--r)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px">Mevcut · ${before.count} kişi</div>
+        <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;margin-bottom:4px">${Math.round(before.total)} sa/ay</div>
+        <span class="badge ${utilBadgeClass(before.rate)}">${before.rate}% kullanım</span>
+      </div>
+      <div style="padding:14px;background:var(--brand-l);border-radius:var(--r);border:1px solid rgba(245,166,35,.2)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--brand-d);margin-bottom:8px">Yeni ekip · ${simEmps.length} kişi</div>
+        <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;margin-bottom:4px">${afterCap} sa kapasite</div>
+        <span class="badge ${utilBadgeClass(afterRate)}">${afterRate}% kullanım</span>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:10px">Kategori dağılımı (ekip ortalaması değişimi)</div>
+    ${CAT_NAMES.map((c,i)=>`<div class="bar-row">
+      <div class="bar-label"><span>${c}</span><span class="val">${before.avgPcts[i]}% → ${avgAfter[i]}%</span></div>
+      <div class="bar-track" style="height:8px"><div class="bar-fill" style="width:${avgAfter[i]}%;background:${COLORS[i]}"></div></div>
+    </div>`).join('')}
+    <div class="divider"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:10px">Mevcut ekip + yeni pozisyon (simülasyon)</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Kişi</th><th>İş Yükü</th><th>Kapasite</th><th>Kullanım</th></tr></thead>
+        <tbody>
+          ${emps.map(p=>`<tr>
+            <td>${p.name} <span style="font-size:11px;color:var(--txt3)">${p.title}</span></td>
+            <td style="font-family:'DM Mono',monospace">${Math.round(p.hours)} sa</td>
+            <td style="font-family:'DM Mono',monospace">${p.capacity} sa</td>
+            <td><span class="badge ${utilBadgeClass(utilRate(p))}">${utilRate(p)}%</span></td>
+          </tr>`).join('')}
+          <tr style="background:var(--brand-xl);border-top:2px solid rgba(245,166,35,.3)">
+            <td><strong>${pos}</strong> <span class="badge badge-brand" style="margin-left:6px">Simülasyon</span></td>
+            <td style="font-family:'DM Mono',monospace;color:var(--txt3)">${simHours} sa (tahmini)</td>
+            <td style="font-family:'DM Mono',monospace">${cap} sa</td>
+            <td><span class="badge badge-brand">~${Math.round(simHours/cap*100)}%</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--txt3);font-style:italic">
+      ⚡ Simülasyon sonucu — bu kişi henüz gerçek veriye eklenmedi. Kaydetmek için "+ Kişi Ekle" kullanın.
+    </div>
+  </div>`;
+}
+
+async function runAIAnalysis() {
+  const deptId = document.getElementById('sim-dept').value;
+  const dept = DB.departments.find(d=>d.id===deptId);
+  if (!dept) { alert('Lütfen bir bölüm seçin.'); return; }
+  const pcts = ['ss1','ss2','ss3','ss4'].map(id=>parseInt(document.getElementById(id).value));
+  const pos = document.getElementById('sim-pos').value||'Yeni Pozisyon';
+  const cap = parseInt(document.getElementById('sim-cap').value)||180;
+  const notes = document.getElementById('sim-notes').value;
+  const btn = document.getElementById('ai-btn');
+  btn.disabled=true; btn.textContent='Analiz ediliyor...';
+  document.getElementById('ai-result').innerHTML = `<div class="ai-box" style="animation:fadeIn .2s ease">
+    <div class="ai-title">✦ Claude analiz ediyor</div>
+    <div style="display:flex;align-items:center;gap:8px;color:var(--purple)"><div class="dot-pulse"><span></span><span></span><span></span></div><span style="font-size:13px">İş gücü verileri değerlendiriliyor...</span></div>
+  </div>`;
+
+  const teamSummary = (dept.employees||[]).map(p=>
+    `${p.name} (${p.title}): ${Math.round(p.hours)}/${p.capacity} saat, %${utilRate(p)} kullanım — Dav&Tek ${p.pcts[0]}%, Stratejik ${p.pcts[1]}%, Proje ${p.pcts[2]}%, Operasyonel ${p.pcts[3]}%${p.notes?` | Not: ${p.notes}`:''}`
+  ).join('\n');
+
+  const companyCtx = DB.departments.length > 1
+    ? `Şirket genelinde ${DB.departments.length} bölüm, toplam ${DB.departments.flatMap(d=>d.employees||[]).length} çalışan bulunuyor.`
+    : '';
+
+  const prompt = `Sen TKG Otomotiv'in organizasyon danışmanısın. ${companyCtx}
+
+BÖLÜM: ${dept.name}
+${dept.desc?`Açıklama: ${dept.desc}`:''}
+
+MEVCUT EKİP:
+${teamSummary||'Henüz çalışan yok.'}
+
+YENİ POZİSYON:
+- Pozisyon: ${pos}
+- Bölüm: ${dept.name}
+- Aylık kapasite: ${cap} saat
+- Beklenen dağılım: Dav&Tek ${pcts[0]}%, Stratejik ${pcts[1]}%, Proje ${pcts[2]}%, Operasyonel ${pcts[3]}%
+${notes?`- Notlar: ${notes}`:''}
+
+Aşağıdakileri kısa ve pratik Türkçe ile madde madde değerlendir:
+1. Yük dengeleme etkisi — bu pozisyon mevcut aşırı yükü nasıl azaltır?
+2. Öncelikli görev devir önerileri — hangi görevler/sorumluluklar bu kişiye aktarılmalı?
+3. Dikkat edilmesi gereken riskler veya boşluklar
+4. Genel değerlendirme ve öneri`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data = await res.json();
+    const text = data.content?.map(c=>c.text||'').join('')||'Yanıt alınamadı.';
+    document.getElementById('ai-result').innerHTML = `<div class="ai-box" style="animation:fadeIn .2s ease"><div class="ai-title">✦ Claude analizi</div><div class="ai-body">${text}</div></div>`;
+  } catch(e) {
+    document.getElementById('ai-result').innerHTML = `<div class="ai-box"><div class="ai-title">Bağlantı hatası</div><div class="ai-body">Claude analizine ulaşılamıyor.</div></div>`;
+  }
+  btn.disabled=false; btn.textContent='✦ Claude ile Analiz Et';
+}
+
+// ============================================================
+// DEPT MODAL
+// ============================================================
+function openDeptModal(deptId) {
+  editingDeptId = deptId || null;
+  const dept = deptId ? DB.departments.find(d=>d.id===deptId) : null;
+  document.getElementById('modal-dept-title').textContent = dept ? 'Bölümü Düzenle' : 'Yeni Bölüm Ekle';
+  document.getElementById('dept-name-input').value = dept?.name||'';
+  document.getElementById('dept-desc-input').value = dept?.desc||'';
+  document.getElementById('modal-dept').classList.add('open');
+}
+function editCurrentDept() { openDeptModal(currentDeptId); }
+async function saveDept() {
+  const name = document.getElementById('dept-name-input').value.trim();
+  if (!name) { alert('Bölüm adı zorunludur.'); return; }
+  const desc = document.getElementById('dept-desc-input').value.trim();
+  if (editingDeptId) {
+    const dept = DB.departments.find(d=>d.id===editingDeptId);
+    if (dept) { dept.name=name; dept.desc=desc; await saveDeptToSupabase(dept); }
+  } else {
+    const newDept = {id: crypto.randomUUID(), name, desc, employees:[]};
+    DB.departments.push(newDept);
+    await saveDeptToSupabase(newDept);
+  }
+  saveDB(); renderSidebar();
+  if (document.getElementById('page-company').classList.contains('active')) renderCompany();
+  closeModal('modal-dept');
+}
+
+// ============================================================
+// PERSON MODAL
+// ============================================================
+function syncPerson() {
+  const vals=['pa1','pa2','pa3','pa4'].map(id=>parseInt(document.getElementById(id)?.value||0));
+  ['pv1','pv2','pv3','pv4'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=vals[i]+'%';});
+  const total=vals.reduce((a,b)=>a+b,0);
+  const el=document.getElementById('p-sum');
+  if(el){el.className='sum-pill '+(total===100?'sum-ok':'sum-err');el.textContent='Toplam: '+total+'%'+(total===100?' ✓':' (100 olmalı)');}
+}
+
+function openAddPersonModal() {
+  editingPersonId=null;
+  editingPersonDeptId=currentDeptId;
+  modalTasks=[];
+  document.getElementById('modal-person-title').textContent='Çalışan Ekle';
+  ['p-name','p-title','p-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-cap').value=180;
+  document.getElementById('p-hours').value='';
+  document.getElementById('p-networking').value=0;
+  document.getElementById('p-date').value='';
+  ['pa1','pa2','pa3','pa4'].forEach((id,i)=>document.getElementById(id).value=[25,15,10,50][i]);
+  syncPerson(); renderModalTasks();
+  document.getElementById('modal-person').classList.add('open');
+}
+
+function openEditPersonModal(deptId, personId) {
+  editingPersonDeptId=deptId; editingPersonId=personId;
+  const dept=DB.departments.find(d=>d.id===deptId);
+  const p=dept?.employees?.find(e=>e.id===personId);
+  if(!p) return;
+  modalTasks=[...(p.tasks||[])];
+  document.getElementById('modal-person-title').textContent=p.name+' — Düzenle';
+  document.getElementById('p-name').value=p.name;
+  document.getElementById('p-title').value=p.title;
+  document.getElementById('p-cap').value=p.capacity;
+  document.getElementById('p-hours').value=p.hours;
+  document.getElementById('p-networking').value=p.networking||0;
+  document.getElementById('p-date').value=p.startDate||'';
+  document.getElementById('p-notes').value=p.notes||'';
+  ['pa1','pa2','pa3','pa4'].forEach((id,i)=>document.getElementById(id).value=p.pcts[i]);
+  syncPerson(); renderModalTasks();
+  document.getElementById('modal-person').classList.add('open');
+}
+
+function addModalTask() {
+  const name=document.getElementById('t-name').value.trim();
+  const cat=parseInt(document.getElementById('t-cat').value);
+  const hrs=parseFloat(document.getElementById('t-hrs').value);
+  if(!name||isNaN(hrs)||hrs<=0) return;
+  modalTasks.push({name,cat,hours:hrs});
+  document.getElementById('t-name').value='';
+  document.getElementById('t-hrs').value='';
+  renderModalTasks();
+  // Auto-update hours field
+  const total=modalTasks.reduce((a,t)=>a+t.hours,0);
+  document.getElementById('p-hours').value=Math.round(total);
+}
+
+function removeModalTask(i) { modalTasks.splice(i,1); renderModalTasks(); }
+
+function renderModalTasks() {
+  const total=modalTasks.reduce((a,t)=>a+t.hours,0);
+  document.getElementById('modal-tasks-list').innerHTML = modalTasks.length
+    ? `<div style="margin-bottom:10px">${modalTasks.map((t,i)=>`
+        <div class="task-item">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="task-cat task-cat-${t.cat}">${CAT_SHORT[t.cat]}</span>
+            <span style="font-size:12px">${t.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${t.hours} sa</span>
+            <button class="btn btn-sm btn-danger" onclick="removeModalTask(${i})">×</button>
+          </div>
+        </div>`).join('')}
+        <div style="font-size:11px;color:var(--txt3);padding:6px 0;font-weight:600;font-family:'DM Mono',monospace">Toplam: ${Math.round(total)} sa/ay</div>
+      </div>`
+    : '<p style="font-size:12px;color:var(--txt4);margin-bottom:8px">Henüz görev eklenmedi.</p>';
+}
+
+async function savePerson() {
+  const name=document.getElementById('p-name').value.trim();
+  const title=document.getElementById('p-title').value.trim();
+  if(!name||!title){alert('Ad ve unvan zorunludur.');return;}
+  const pcts=['pa1','pa2','pa3','pa4'].map(id=>parseInt(document.getElementById(id).value));
+  if(pcts.reduce((a,b)=>a+b,0)!==100){alert('İş yükü yüzdeleri toplamı 100 olmalıdır.');return;}
+  const cap=parseInt(document.getElementById('p-cap').value)||180;
+  const taskTotal=modalTasks.reduce((a,t)=>a+t.hours,0);
+  const hoursInput=parseFloat(document.getElementById('p-hours').value);
+  const hours=!isNaN(hoursInput)&&hoursInput>0 ? hoursInput : (taskTotal>0?taskTotal:Math.round(cap*0.88));
+
+  const emp={
+    id:editingPersonId||crypto.randomUUID(), name, title, capacity:cap, hours:Math.round(hours),
+    pcts, networking:parseFloat(document.getElementById('p-networking').value)||0,
+    startDate:document.getElementById('p-date').value,
+    notes:document.getElementById('p-notes').value.trim(),
+    tasks:[...modalTasks]
+  };
+
+  const dept=DB.departments.find(d=>d.id===editingPersonDeptId);
+  if(!dept) return;
+  if(editingPersonId) {
+    const idx=dept.employees.findIndex(e=>e.id===editingPersonId);
+    if(idx!==-1) dept.employees[idx]=emp;
+  } else { dept.employees.push(emp); }
+
+  await savePersonToSupabase(emp, editingPersonDeptId);
+  saveDB(); renderSidebar(); closeModal('modal-person');
+  if(currentDeptId===editingPersonDeptId) {
+    if(currentDeptTab==='people') renderDeptPeople();
+    else if(currentDeptTab==='tasks') renderDeptTasks();
+    else if(currentDeptTab==='details') renderDeptDetails();
+    else renderDeptOverview();
+  }
+}
+
+async function deletePerson(deptId, personId) {
+  if(!confirm('Bu çalışanı silmek istediğinizden emin misiniz?')) return;
+  const dept=DB.departments.find(d=>d.id===deptId);
+  if(dept) dept.employees=dept.employees.filter(e=>e.id!==personId);
+  await deletePersonFromSupabase(personId);
+  saveDB(); renderSidebar();
+  if(currentDeptId===deptId){
+    renderDeptOverview();
+    if(currentDeptTab!=='overview') renderDeptPeople();
+  }
+  if(document.getElementById('page-company').classList.contains('active')) renderCompany();
+}
+
+// ============================================================
+// IMPORT (CSV)
+// ============================================================
+function openImportModal() {
+  importRows=[];
+  document.getElementById('import-preview').innerHTML='';
+  document.getElementById('import-btn').disabled=true;
+  document.getElementById('import-dept').value='';
+  document.getElementById('import-new-dept-field').style.display='none';
+  document.getElementById('modal-import').classList.add('open');
+  renderSidebar(); // refresh select
+}
+
+document.getElementById('import-dept').addEventListener('change',function(){
+  document.getElementById('import-new-dept-field').style.display=this.value==='__new__'?'':'none';
+});
+
+function handleCSV(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(lines.length<2){alert('CSV dosyası en az 1 başlık + 1 veri satırı içermeli.');return;}
+    const rows=[];
+    for(let i=1;i<lines.length;i++){
+      const cols=lines[i].split(',').map(c=>c.trim());
+      if(cols.length<8) continue;
+      const [name,title,cap,hours,d1,d2,d3,d4,net,notes]=cols;
+      rows.push({name,title,capacity:parseFloat(cap)||180,hours:parseFloat(hours)||0,pcts:[parseInt(d1)||0,parseInt(d2)||0,parseInt(d3)||0,parseInt(d4)||0],networking:parseFloat(net)||0,notes:notes||''});
+    }
+    importRows=rows;
+    document.getElementById('import-preview').innerHTML=rows.length
+      ? `<div class="alert alert-info"><span>✓</span><span>${rows.length} çalışan bulundu: ${rows.map(r=>r.name).join(', ')}</span></div>`
+      : `<div class="alert alert-warn"><span>!</span><span>Geçerli satır bulunamadı. CSV formatını kontrol edin.</span></div>`;
+    document.getElementById('import-btn').disabled=rows.length===0;
+  };
+  reader.readAsText(file);
+}
+
+async function doImport() {
+  let deptId=document.getElementById('import-dept').value;
+  if(deptId==='__new__'||!deptId){
+    const newName=document.getElementById('import-new-dept-name').value.trim()||(deptId==='__new__'?'Yeni Bölüm':'');
+    if(!newName){alert('Bölüm adı girin veya mevcut bölümü seçin.');return;}
+    const newDept={id:crypto.randomUUID(),name:newName,desc:'CSV ile içe aktarıldı',employees:[]};
+    DB.departments.push(newDept);
+    await saveDeptToSupabase(newDept);
+    deptId=newDept.id;
+  }
+  const dept=DB.departments.find(d=>d.id===deptId);
+  if(!dept) return;
+  const rows = importRows.map(r=>({id:crypto.randomUUID(),...r,startDate:'',tasks:[]}));
+  rows.forEach(r=>dept.employees.push(r));
+  await importToSupabase(deptId, rows);
+  saveDB(); renderSidebar(); closeModal('modal-import');
+  showPage('dept',deptId);
+}
+
+// Drop zone
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('csv-file');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleCSV(inp);}});
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function openSettingsModal() {
+  document.getElementById('setting-company').value=DB.companyName;
+  document.getElementById('modal-settings').classList.add('open');
+}
+function saveSettings() {
+  DB.companyName=document.getElementById('setting-company').value.trim()||'TKG Otomotiv';
+  saveDB(); renderSidebar(); closeModal('modal-settings');
+}
+async function resetAllData() {
+  if(!confirm('Tüm veriler silinecek. Bu işlem geri alınamaz. Emin misiniz?')) return;
+  if(!isAdmin){alert('Bu işlem için admin yetkisi gereklidir.');return;}
+  localStorage.removeItem(STORAGE_KEY);
+  await loadFromSupabase();
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{if(e.target===bg) bg.classList.remove('open');});
+});
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportData() {
+  const json=JSON.stringify(DB,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='tkg_isgucu_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+
+// ============================================================
+// PRINT
+// ============================================================
+function printReport() {
+  const date=new Date().toLocaleDateString('tr-TR');
+  const allEmps=DB.departments.flatMap(d=>(d.employees||[]).map(e=>({...e,deptName:d.name})));
+  const totalH=allEmps.reduce((a,p)=>a+p.hours,0);
+  const totalC=allEmps.reduce((a,p)=>a+p.capacity,0);
+  const w=window.open('','_blank','width=800,height=1000');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TKG İş Gücü Analizi</title>
+  <style>body{font-family:system-ui,sans-serif;padding:36px;color:#111;font-size:13px}
+  h1{font-size:20px;margin-bottom:4px}h2{font-size:15px;margin:20px 0 8px;border-bottom:1px solid #eee;padding-bottom:6px}
+  .sub{color:#666;font-size:12px;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+  .m{background:#f7f7f5;padding:12px;border-radius:6px}.ml{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#999;margin-bottom:3px}
+  .mv{font-size:18px;font-weight:700}table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:12px}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#999;padding:7px 8px;border-bottom:2px solid #eee;text-align:left}
+  td{padding:8px;border-bottom:1px solid #f0f0f0}.warn{color:#B91C1C;font-weight:700}.good{color:#15803D;font-weight:700}
+  @media print{button{display:none}}</style></head><body>
+  <h1>${DB.companyName} — İş Gücü Analizi Raporu</h1>
+  <div class="sub">Tüm bölümler · ${date} · ${DB.departments.length} bölüm · ${allEmps.length} çalışan</div>
+  <div class="grid">
+    <div class="m"><div class="ml">Toplam çalışan</div><div class="mv">${allEmps.length}</div></div>
+    <div class="m"><div class="ml">Toplam iş yükü</div><div class="mv">${Math.round(totalH)} sa</div></div>
+    <div class="m"><div class="ml">Toplam kapasite</div><div class="mv">${Math.round(totalC)} sa</div></div>
+    <div class="m"><div class="ml">Ort. kullanım</div><div class="mv">${totalC>0?Math.round(totalH/totalC*100):0}%</div></div>
+  </div>
+  ${DB.departments.map(d=>{
+    const s=deptStats(d);
+    return `<h2>${d.name}</h2>
+    <table><thead><tr><th>Kişi</th><th>Unvan</th><th>İş Yükü</th><th>Kapasite</th><th>Kullanım</th><th>Dav&Tek</th><th>Stratejik</th><th>Proje</th><th>Operasy.</th></tr></thead>
+    <tbody>${(d.employees||[]).map(p=>{const r=utilRate(p);return`<tr>
+      <td><b>${p.name}</b></td><td>${p.title}</td>
+      <td>${Math.round(p.hours)} sa</td><td>${p.capacity} sa</td>
+      <td class="${r>100?'warn':'good'}">${r}%</td>
+      ${p.pcts.map(v=>`<td>${v}%</td>`).join('')}
+    </tr>`;}).join('')}
+    <tr style="background:#f7f7f5"><td colspan="2"><b>Bölüm Toplamı</b></td><td><b>${Math.round(s.total)} sa</b></td><td><b>${s.cap} sa</b></td><td class="${s.rate>100?'warn':'good'}"><b>${s.rate}%</b></td><td colspan="4"></td></tr>
+    </tbody></table>`;
+  }).join('')}
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+// ============================================================
+// INIT — Supabase auth kontrolü script başında yapılıyor
+// ============================================================
+syncSim();
+syncPerson();
+</script>
+</body>
+</html>
