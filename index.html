@@ -549,12 +549,12 @@ table.tbl tr:hover td{background:var(--surf2)}
 // SUPABASE CONFIG
 // ============================================================
 const SUPABASE_URL = 'https://zfuxecleedvjjfvzulpr.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Rsc4FbloFl2RstF0y-Zqjw_OtLh75VC';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmdXhlY2xlZWR2ampmdnp1bHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Nzk2OTIsImV4cCI6MjA5MjI1NTY5Mn0.zH3PMMbTdBRiKCTfN7m7fLLvc7WhMro065To1gudOqE';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Admin e-posta — bu kullanıcı her şeyi görür ve düzenleyebilir
-const ADMIN_EMAIL = 'ozge.basoglu@tkg.com.tr'; // <-- buraya kendi mailinizi yazın
+const ADMIN_EMAIL = 'ozge.basoglu@tkg.com.tr';
 
 let currentUser = null;
 let isAdmin = false;
